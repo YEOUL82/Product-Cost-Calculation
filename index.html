@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SDC 원가·구매 계산기 / Cost & Purchase Calculator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#fff; --bg2:#f7f8fa; --bg3:#eef0f3;
+    --border:#e2e4e8; --text:#111318; --text2:#5a5f6e; --text3:#9aa0b0;
+    --accent:#2563eb; --accent-bg:#eff4ff; --green:#16a34a;
+    --radius:8px; --shadow:0 1px 4px rgba(0,0,0,.08);
+  }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:14px; color:var(--text); background:var(--bg2); min-height:100vh; }
+
+  /* Header */
+  .app-header { background:var(--bg); border-bottom:1px solid var(--border); padding:0 20px; display:flex; align-items:center; height:56px; position:sticky; top:0; z-index:10; box-shadow:var(--shadow); gap:12px; }
+  .app-header h1 { font-size:15px; font-weight:600; flex:1; }
+  .lang-toggle { display:flex; background:var(--bg3); border-radius:6px; overflow:hidden; border:1px solid var(--border); }
+  .lang-btn { padding:5px 12px; border:none; background:transparent; font-size:12px; font-weight:600; color:var(--text2); cursor:pointer; transition:all .15s; }
+  .lang-btn.active { background:var(--accent); color:#fff; }
+
+  /* Body */
+  .app-body { max-width:960px; margin:0 auto; padding:20px 16px 60px; }
+
+  /* Tabs */
+  .tabs { display:flex; gap:4px; background:var(--bg3); border-radius:var(--radius); padding:4px; margin-bottom:20px; }
+  .tab-btn { flex:1; padding:8px 10px; border:none; border-radius:6px; background:transparent; font-size:13px; font-weight:500; color:var(--text2); cursor:pointer; transition:all .15s; }
+  .tab-btn.active { background:var(--bg); color:var(--text); box-shadow:var(--shadow); }
+
+  /* Cards */
+  .card { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:16px; }
+  .card-title { font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px; }
+
+  /* Stats */
+  .stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:16px; }
+  .stat { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; }
+  .stat-label { font-size:11px; color:var(--text3); margin-bottom:4px; }
+  .stat-value { font-size:20px; font-weight:600; }
+  .stat-value.accent { color:var(--accent); }
+
+  /* Form */
+  .form-row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:8px; }
+  .form-group { display:flex; flex-direction:column; gap:5px; }
+  .form-group.grow { flex:1; min-width:150px; }
+  .form-group.sm   { min-width:88px; }
+  .form-group label { font-size:12px; color:var(--text2); font-weight:500; }
+  input[type=number],input[type=text],select { border:1px solid var(--border); border-radius:6px; padding:8px 10px; font-size:13px; color:var(--text); background:var(--bg); width:100%; transition:border-color .15s; }
+  input:focus,select:focus { outline:none; border-color:var(--accent); }
+
+  /* Buttons */
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-weight:500; background:var(--bg); color:var(--text); cursor:pointer; white-space:nowrap; transition:all .15s; }
+  .btn:hover { background:var(--bg2); }
+  .btn.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn.primary:hover { background:#1d4ed8; }
+  .btn.ghost { color:var(--text3); border-color:transparent; padding:4px 8px; }
+  .btn.ghost:hover { color:#dc2626; background:#fff1f1; }
+
+  /* Order items */
+  .order-item { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:6px; font-size:13px; }
+  .order-name { flex:1; font-weight:500; }
+  .order-tag { font-size:11px; background:var(--bg3); border-radius:4px; padding:2px 7px; color:var(--text2); }
+
+  /* Sub tabs */
+  .sub-tabs { display:flex; gap:8px; margin-bottom:14px; }
+  .sub-tab { flex:1; padding:8px; border:1.5px solid var(--border); border-radius:6px; background:var(--bg); font-size:13px; font-weight:500; color:var(--text2); cursor:pointer; text-align:center; transition:all .15s; }
+  .sub-tab.active { border-color:var(--accent); color:var(--accent); background:var(--accent-bg); }
+
+  /* Tables */
+  .tbl-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:8px; font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--border); }
+  th.r,td.r { text-align:right; }
+  td { padding:9px 8px; border-bottom:1px solid var(--bg3); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--bg2); }
+  td.dim  { color:var(--text3); font-size:12px; }
+  td.bold { font-weight:600; }
+  td.accent { font-weight:700; color:var(--accent); }
+  .empty-row td { text-align:center; color:var(--text3); padding:24px; }
+
+  /* Settings */
+  .settings-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:16px; }
+  .sg label { font-size:12px; color:var(--text2); font-weight:500; display:block; margin-bottom:5px; }
+  .sg .hint { font-size:11px; color:var(--text3); margin-top:4px; line-height:1.5; }
+
+  /* Price tag */
+  .price-tag { display:inline-block; background:var(--accent-bg); color:var(--accent); font-weight:700; border-radius:4px; padding:1px 7px; }
+
+  .note { font-size:11px; color:var(--text3); line-height:1.7; margin-bottom:12px; }
+  code { font-size:11px; background:var(--bg3); padding:1px 5px; border-radius:3px; }
+
+  /* Bilingual */
+  .en { display:none; }
+  body.en .ko { display:none; }
+  body.en .en { display:inline; }
+  body.en .en-block { display:block; }
+  .en-block { display:none; }
+
+  @media(max-width:600px){
+    .app-body { padding:12px 10px 50px; }
+    .sub-tabs { flex-wrap:wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>
+    <span class="ko">SDC 원가·구매 계산기</span>
+    <span class="en">SDC Cost &amp; Purchase Calculator</span>
+  </h1>
+  <div class="lang-toggle">
+    <button class="lang-btn active" data-lang="ko">KO</button>
+    <button class="lang-btn" data-lang="en">EN</button>
+  </div>
+</header>
+
+<div class="app-body">
+
+  <!-- Main tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="calc">
+      <span class="ko">주문 계산</span><span class="en">Order Calc</span>
+    </button>
+    <button class="tab-btn" data-tab="cost">
+      <span class="ko">원가 설정</span><span class="en">Cost Settings</span>
+    </button>
+    <button class="tab-btn" data-tab="mat">
+      <span class="ko">자재 단가</span><span class="en">Material Prices</span>
+    </button>
+  </div>
+
+  <!-- ══════════════════════════════════
+       TAB 1 · 주문 계산 / Order Calc
+  ══════════════════════════════════ -->
+  <div id="tab-calc">
+    <div class="card">
+      <div class="card-title">
+        <span class="ko">주문 입력</span><span class="en">Order Input</span>
+      </div>
+      <div class="form-row">
+        <div class="form-group grow">
+          <label><span class="ko">제품</span><span class="en">Product</span></label>
+          <select id="ps"></select>
+        </div>
+        <div class="form-group sm">
+          <label><span class="ko">생산수량</span><span class="en">Qty</span></label>
+          <input type="number" id="iq" value="100" min="1" step="1" />
+        </div>
+        <div class="form-group sm">
+          <label>Loss rate (%)</label>
+          <input type="number" id="il" value="15" min="0" max="100" step="1" />
+        </div>
+        <div class="form-group">
+          <label>&nbsp;</label>
+          <button class="btn primary" id="ab">
+            ＋ <span class="ko">주문 추가</span><span class="en">Add Order</span>
+          </button>
+        </div>
+      </div>
+      <p class="note">
+        <span class="ko">* Loss rate는 원단류(Kitenge, P.E, Rubber)에만 적용 | K- 자재 및 라벨은 한국 입고품으로 원가 제외</span>
+        <span class="en">* Loss rate applies to fabric only (Kitenge, P.E, Rubber) | K- materials &amp; labels are Korea imports, excluded from cost</span>
+      </p>
+      <div id="ol"></div>
+    </div>
+
+    <!-- Sub tabs -->
+    <div class="sub-tabs">
+      <button class="sub-tab active" data-st="co">
+        <span class="ko">원가 분석</span><span class="en">Cost Analysis</span>
+      </button>
+      <button class="sub-tab" data-st="pu">
+        <span class="ko">실제 구매계산</span><span class="en">Purchase Calc</span>
+      </button>
+    </div>
+
+    <!-- Cost analysis panel -->
+    <div id="vco">
+      <div class="stat-grid" id="stat-cards"></div>
+      <div class="card">
+        <div class="card-title">
+          <span class="ko">제품별 원가 상세</span><span class="en">Cost Breakdown by Product</span>
+        </div>
+        <p class="note">
+          <span class="ko">자재비 + 부재료(자재비×<span id="note-sub">10</span>%) + 인건비 + 운영비(<span id="note-oh">0</span> UGX/개) = 개당 원가 → 권장 판매가 = 원가 × (1 + <span id="note-margin">50</span>%)</span>
+          <span class="en">Material + Consumables (material×<span id="note-sub-en">10</span>%) + Labor + Overhead (<span id="note-oh-en">0</span> UGX/unit) = Unit Cost → Suggested Price = Cost × (1 + <span id="note-margin-en">50</span>%)</span>
+        </p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th><span class="ko">제품</span><span class="en">Product</span></th>
+              <th class="r"><span class="ko">수량</span><span class="en">Qty</span></th>
+              <th class="r"><span class="ko">자재비</span><span class="en">Material</span></th>
+              <th class="r"><span class="ko">부재료</span><span class="en">Consumables</span></th>
+              <th class="r"><span class="ko">인건비</span><span class="en">Labor</span></th>
+              <th class="r"><span class="ko">운영비</span><span class="en">Overhead</span></th>
+              <th class="r"><span class="ko">개당 원가</span><span class="en">Unit Cost</span></th>
+              <th class="r"><span class="ko">권장 판매가</span><span class="en">Suggested Price</span></th>
+            </tr></thead>
+            <tbody id="csb"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <span class="ko">자재별 이론 원가 (loss 포함)</span>
+          <span class="en">Material Cost Detail (incl. loss)</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th><span class="ko">자재명</span><span class="en">Material</span></th>
+              <th class="r"><span class="ko">필요량</span><span class="en">Required</span></th>
+              <th><span class="ko">단위</span><span class="en">Unit</span></th>
+              <th class="r"><span class="ko">단가</span><span class="en">Unit Price</span></th>
+              <th class="r"><span class="ko">이론원가 (UGX)</span><span class="en">Theo. Cost (UGX)</span></th>
+            </tr></thead>
+            <tbody id="cdb"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Purchase panel -->
+    <div id="vpu" style="display:none;">
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-label"><span class="ko">총 구매비용</span><span class="en">Total Purchase Cost</span></div>
+          <div class="stat-value accent" id="pt">0 UGX</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label"><span class="ko">이론 자재비 대비 차액</span><span class="en">vs. Theoretical Material Cost</span></div>
+          <div class="stat-value" id="pd">0 UGX</div>
+        </div>
+      </div>
+      <div class="card">
+        <p class="note">
+          <span class="ko">* 구매단위 미달분은 올림 처리. 잉여분은 다음 생산 재고로 활용 가능.</span>
+          <span class="en">* Quantities rounded up to purchase unit. Surplus carries over as stock for next production.</span>
+        </p>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th><span class="ko">자재명</span><span class="en">Material</span></th>
+              <th class="r"><span class="ko">필요량</span><span class="en">Required</span></th>
+              <th class="r"><span class="ko">구매단위</span><span class="en">Purchase Unit</span></th>
+              <th class="r"><span class="ko">구매수량</span><span class="en">Buy Qty</span></th>
+              <th class="r"><span class="ko">잉여량</span><span class="en">Surplus</span></th>
+              <th class="r"><span class="ko">단가 (UGX)</span><span class="en">Price (UGX)</span></th>
+              <th class="r"><span class="ko">구매비용 (UGX)</span><span class="en">Cost (UGX)</span></th>
+            </tr></thead>
+            <tbody id="pdb"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-calc -->
+
+  <!-- ══════════════════════════════════
+       TAB 2 · 원가 설정 / Cost Settings
+  ══════════════════════════════════ -->
+  <div id="tab-cost" style="display:none;">
+    <div class="card">
+      <div class="card-title">
+        <span class="ko">공통 설정</span><span class="en">General Settings</span>
+      </div>
+      <div class="settings-grid">
+        <div class="sg">
+          <label><span class="ko">부재료비 (자재비 대비 %)</span><span class="en">Consumables (% of material cost)</span></label>
+          <input type="number" id="sub-pct" value="10" min="0" max="100" step="1" />
+          <p class="hint"><span class="ko">실, 본드 등 수량계산 어려운 소모품</span><span class="en">Thread, glue, misc. small consumables</span></p>
+        </div>
+        <div class="sg">
+          <label><span class="ko">목표 마진율 (%)</span><span class="en">Target Margin (%)</span></label>
+          <input type="number" id="margin" value="50" min="0" step="1" />
+          <p class="hint"><span class="ko">권장 판매가 = 총원가 × (1 + 마진율)</span><span class="en">Suggested price = total cost × (1 + margin)</span></p>
+        </div>
+        <div class="sg">
+          <label><span class="ko">월 운영비 (UGX)</span><span class="en">Monthly Overhead (UGX)</span></label>
+          <input type="number" id="monthly-overhead" value="500000" min="0" step="10000" />
+          <p class="hint"><span class="ko">전기세, 임대료 등 월 고정비 합계</span><span class="en">Electricity, rent, and other fixed monthly costs</span></p>
+        </div>
+        <div class="sg">
+          <label><span class="ko">월 총 생산수량</span><span class="en">Monthly Production Volume</span></label>
+          <input type="number" id="monthly-qty" value="200" min="1" step="1" />
+          <p class="hint"><span class="ko">개당 운영비 = 월운영비 ÷ 월생산량</span><span class="en">Overhead/unit = monthly overhead ÷ monthly volume</span></p>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        <span class="ko">제품별 인건비 (HMP Labor Cost 기준)</span>
+        <span class="en">Labor Cost by Product (HMP Labor Cost sheet)</span>
+      </div>
+      <p class="note">
+        <span class="ko">HMP_Production_Capable_Item_Information 파일의 Labor cost 시트 기준. 직접 수정 가능.</span>
+        <span class="en">Based on the Labor cost sheet in HMP_Production_Capable_Item_Information. Editable.</span>
+      </p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th><span class="ko">제품명</span><span class="en">Product</span></th>
+            <th class="r"><span class="ko">인건비 (UGX/개)</span><span class="en">Labor Cost (UGX/unit)</span></th>
+          </tr></thead>
+          <tbody id="labor-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <button class="btn primary" id="apply-cost">
+      ✓ <span class="ko">적용</span><span class="en">Apply</span>
+    </button>
+  </div><!-- /tab-cost -->
+
+  <!-- ══════════════════════════════════
+       TAB 3 · 자재 단가 / Material Prices
+  ══════════════════════════════════ -->
+  <div id="tab-mat" style="display:none;">
+    <div class="card">
+      <div class="card-title">
+        <span class="ko">자재 단가 설정 (SDC Stock 기준)</span>
+        <span class="en">Material Price Settings (SDC Stock basis)</span>
+      </div>
+      <p class="note">
+        <span class="ko">엑셀 material cost 시트가 업데이트되면 아래 값을 수정 후 [적용]을 누르세요. 영구 반영은 <code>data.js</code>의 <code>MATERIALS</code> 항목을 직접 수정하세요.</span>
+        <span class="en">When the Excel material cost sheet is updated, edit values below and click Apply. For permanent changes, edit <code>MATERIALS</code> in <code>data.js</code>.</span>
+      </p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th><span class="ko">자재명</span><span class="en">Material</span></th>
+            <th><span class="ko">구매단위</span><span class="en">Purchase Unit</span></th>
+            <th class="r"><span class="ko">단위당 수량</span><span class="en">Qty/Unit</span></th>
+            <th class="r"><span class="ko">단위 가격 (UGX)</span><span class="en">Unit Price (UGX)</span></th>
+            <th><span class="ko">기본단위</span><span class="en">Base Unit</span></th>
+          </tr></thead>
+          <tbody id="stb"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn primary" id="apb">✓ <span class="ko">적용</span><span class="en">Apply</span></button>
+      <button class="btn" id="rsb">↺ <span class="ko">기본값 초기화</span><span class="en">Reset to Default</span></button>
+    </div>
+  </div><!-- /tab-mat -->
+
+</div><!-- /app-body -->
+
+<script src="data.js"></script>
+<script>
+(function(){
+
+  // ── 언어 전환 ─────────────────────────────────────────────
+  var currentLang = 'ko';
+  document.querySelectorAll('.lang-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      currentLang = btn.dataset.lang;
+      document.body.className = currentLang === 'en' ? 'en' : '';
+      document.querySelectorAll('.lang-btn').forEach(function(b){
+        b.classList.toggle('active', b.dataset.lang === currentLang);
+      });
+    });
+  });
+
+  // ── 상태 ──────────────────────────────────────────────────
+  function cloneDeep(o){ return JSON.parse(JSON.stringify(o)); }
+  var M    = cloneDeep(MATERIALS);
+  var PDs  = cloneDeep(PRODUCTS);
+  var PDmap = {};
+  PDs.forEach(function(p){ PDmap[p.id] = p; });
+  var CS   = cloneDeep(DEFAULT_COST_SETTINGS);
+  var laborCosts = {};
+  PDs.forEach(function(p){ laborCosts[p.id] = p.labor; });
+  var orders = [];
+
+  function recalcUP(){ for(var k in M) M[k].up = M[k].price / M[k].qty; }
+  recalcUP();
+  function ohPerUnit(){ return CS.monthlyQty > 0 ? CS.monthlyOverhead / CS.monthlyQty : 0; }
+  function fmt(v){ return Math.round(v).toLocaleString(); }
+  function erow(c, koMsg, enMsg){
+    var tr = document.createElement('tr');
+    tr.className = 'empty-row';
+    tr.innerHTML = '<td colspan="'+c+'"><span class="ko">'+koMsg+'</span><span class="en">'+enMsg+'</span></td>';
+    return tr;
+  }
+
+  // ── 제품 select 초기화 ─────────────────────────────────────
+  var psel = document.getElementById('ps');
+  PDs.forEach(function(p){
+    var o = document.createElement('option');
+    o.value = p.id; o.textContent = p.name;
+    psel.appendChild(o);
+  });
+
+  // ── Main tab 전환 ─────────────────────────────────────────
+  var MAIN_VIEWS = { calc:'tab-calc', cost:'tab-cost', mat:'tab-mat' };
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      for(var k in MAIN_VIEWS)
+        document.getElementById(MAIN_VIEWS[k]).style.display = btn.dataset.tab === k ? 'block' : 'none';
+    });
+  });
+
+  // ── Sub tab 전환 ──────────────────────────────────────────
+  document.querySelectorAll('.sub-tab').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.sub-tab').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('vco').style.display = btn.dataset.st === 'co' ? 'block' : 'none';
+      document.getElementById('vpu').style.display = btn.dataset.st === 'pu' ? 'block' : 'none';
+    });
+  });
+
+  // ── 주문 목록 렌더 ────────────────────────────────────────
+  function renderOrders(){
+    var el = document.getElementById('ol');
+    if(!orders.length){
+      el.innerHTML = '<p class="note" style="margin-top:8px;">'+
+        '<span class="ko">추가된 주문이 없습니다. 위에서 제품을 선택하고 주문 추가를 눌러주세요.</span>'+
+        '<span class="en">No orders yet. Select a product above and click Add Order.</span></p>';
+      return;
+    }
+    el.innerHTML = '';
+    orders.forEach(function(o, i){
+      var div = document.createElement('div');
+      div.className = 'order-item';
+      div.innerHTML =
+        '<span class="order-name">'+PDmap[o.p].name+'</span>'+
+        '<span class="order-tag">'+o.q+' <span class="ko">개</span><span class="en">pcs</span></span>'+
+        '<span class="order-tag">loss '+o.l+'%</span>'+
+        '<button class="btn ghost rb" data-i="'+i+'">✕</button>';
+      el.appendChild(div);
+    });
+    el.querySelectorAll('.rb').forEach(function(b){
+      b.addEventListener('click', function(){
+        orders.splice(+b.dataset.i, 1);
+        renderOrders(); calc();
+      });
+    });
+  }
+
+  // ── 핵심 계산 ─────────────────────────────────────────────
+  function calc(){
+    var pcs=[], totalMat=0, totalCost=0, totq=0, req={};
+    for(var k in M) req[k] = 0;
+    var oh = ohPerUnit();
+
+    orders.forEach(function(o){
+      var pd = PDmap[o.p], lf = 1 + o.l/100, matCost = 0;
+      for(var k in pd.m){
+        var isFabric = M[k] && M[k].fabric;
+        var r = pd.m[k] * (isFabric ? lf : 1);
+        matCost += r * (M[k] ? M[k].up : 0);
+        req[k]   = (req[k]||0) + r * o.q;
+      }
+      var sub   = matCost * CS.subPct / 100;
+      var labor = laborCosts[o.p] || 0;
+      var unit  = matCost + sub + labor + oh;
+      var sell  = unit * (1 + CS.margin / 100);
+      totalMat  += matCost * o.q;
+      totalCost += unit * o.q;
+      totq      += o.q;
+      pcs.push({ name:pd.name, q:o.q, matCost, sub, labor, oh, unit, sell });
+    });
+
+    // stat cards
+    var cards = document.getElementById('stat-cards');
+    cards.innerHTML = '';
+    [
+      { ko:'총 생산수량',    en:'Total Production',    val: totq + (currentLang==='en'?' pcs':'개'), cls:'' },
+      { ko:'총 제조원가',    en:'Total Cost',          val: fmt(totalCost)+' UGX', cls:'accent' },
+      { ko:'개당 평균 원가', en:'Avg. Unit Cost',      val: (totq ? fmt(totalCost/totq) : '-')+' UGX', cls:'' },
+      { ko:'개당 운영비',    en:'Overhead / Unit',     val: fmt(oh)+' UGX', cls:'' },
+    ].forEach(function(s){
+      var d = document.createElement('div');
+      d.className = 'stat';
+      d.innerHTML = '<div class="stat-label"><span class="ko">'+s.ko+'</span><span class="en">'+s.en+'</span></div>'+
+                    '<div class="stat-value '+s.cls+'">'+s.val+'</div>';
+      cards.appendChild(d);
+    });
+
+    // update notes
+    ['note-sub','note-sub-en'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=CS.subPct; });
+    ['note-oh','note-oh-en'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=fmt(oh); });
+    ['note-margin','note-margin-en'].forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=CS.margin; });
+
+    // product cost table
+    var csb = document.getElementById('csb'); csb.innerHTML = '';
+    if(!pcs.length){
+      csb.appendChild(erow(8,'주문을 추가해주세요.','Add an order to see results.'));
+    } else {
+      pcs.forEach(function(p){
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>'+p.name+'</td>'+
+          '<td class="r">'+p.q+'</td>'+
+          '<td class="r">'+fmt(p.matCost)+'</td>'+
+          '<td class="r dim">'+fmt(p.sub)+'</td>'+
+          '<td class="r dim">'+fmt(p.labor)+'</td>'+
+          '<td class="r dim">'+fmt(p.oh)+'</td>'+
+          '<td class="r bold">'+fmt(p.unit)+'</td>'+
+          '<td class="r"><span class="price-tag">'+fmt(p.sell)+'</span></td>';
+        csb.appendChild(tr);
+      });
+    }
+
+    // material detail
+    var cdb = document.getElementById('cdb'); cdb.innerHTML = ''; var anyC = false;
+    for(var k in M){
+      var r = req[k]||0; if(r<=0) continue; anyC = true;
+      var m = M[k], tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>'+k+'</td>'+
+        '<td class="r">'+r.toFixed(3)+'</td>'+
+        '<td>'+m.unit+'</td>'+
+        '<td class="r">'+m.up.toFixed(1)+'</td>'+
+        '<td class="r bold">'+fmt(r * m.up)+'</td>';
+      cdb.appendChild(tr);
+    }
+    if(!anyC) cdb.appendChild(erow(5,'주문을 추가하면 자재별 원가가 표시됩니다.','Add an order to see material breakdown.'));
+
+    // purchase calc
+    var tpu=0, prs=[];
+    for(var k in M){
+      var r=req[k]||0; if(r<=0) continue;
+      var m=M[k], pq=Math.ceil(r/m.qty), cost=pq*m.price;
+      tpu += cost;
+      prs.push({ k, r, m, pq, sur:pq*m.qty-r, cost });
+    }
+    document.getElementById('pt').textContent = fmt(tpu)+' UGX';
+    var diff = tpu - totalMat;
+    document.getElementById('pd').textContent = (diff>=0?'+':'')+fmt(diff)+' UGX';
+
+    var pdb = document.getElementById('pdb'); pdb.innerHTML = '';
+    if(!prs.length){
+      pdb.appendChild(erow(7,'주문을 추가하면 구매계산이 표시됩니다.','Add an order to see purchase calculation.'));
+    } else {
+      prs.forEach(function(r){
+        var tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>'+r.k+'</td>'+
+          '<td class="r">'+r.r.toFixed(3)+'</td>'+
+          '<td class="r dim">'+r.m.lb+'</td>'+
+          '<td class="r bold">'+r.pq+'</td>'+
+          '<td class="r dim">'+r.sur.toFixed(3)+' '+r.m.unit+'</td>'+
+          '<td class="r">'+r.m.price.toLocaleString()+'</td>'+
+          '<td class="r bold">'+fmt(r.cost)+'</td>';
+        pdb.appendChild(tr);
+      });
+    }
+  }
+
+  // ── 자재 설정 렌더 ────────────────────────────────────────
+  function renderMat(){
+    var b = document.getElementById('stb'); b.innerHTML = '';
+    for(var k in M){
+      var m=M[k], tr=document.createElement('tr');
+      tr.innerHTML =
+        '<td>'+k+'</td>'+
+        '<td><input type="text"   data-k="'+k+'" data-f="lb"    value="'+m.lb+'"    style="min-width:130px;" /></td>'+
+        '<td><input type="number" data-k="'+k+'" data-f="qty"   value="'+m.qty+'"   step="any" style="width:85px;" class="r" /></td>'+
+        '<td><input type="number" data-k="'+k+'" data-f="price" value="'+m.price+'" step="any" style="width:100px;" class="r" /></td>'+
+        '<td class="dim">'+m.unit+'</td>';
+      b.appendChild(tr);
+    }
+  }
+
+  // ── 인건비 설정 렌더 ──────────────────────────────────────
+  function renderLabor(){
+    var tb = document.getElementById('labor-tbody'); tb.innerHTML = '';
+    PDs.forEach(function(p){
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>'+p.name+'</td>'+
+        '<td class="r"><input type="number" data-id="'+p.id+'" value="'+(laborCosts[p.id]||0)+'" min="0" step="100" style="width:110px;" class="r" /></td>';
+      tb.appendChild(tr);
+    });
+  }
+
+  // ── 이벤트 ────────────────────────────────────────────────
+  document.getElementById('ab').addEventListener('click', function(){
+    var p=psel.value, q=parseFloat(document.getElementById('iq').value)||0, l=parseFloat(document.getElementById('il').value)||0;
+    if(q<=0) return;
+    orders.push({p,q,l}); renderOrders(); calc();
+  });
+
+  document.getElementById('apply-cost').addEventListener('click', function(){
+    CS.subPct          = parseFloat(document.getElementById('sub-pct').value)||0;
+    CS.margin          = parseFloat(document.getElementById('margin').value)||0;
+    CS.monthlyOverhead = parseFloat(document.getElementById('monthly-overhead').value)||0;
+    CS.monthlyQty      = parseFloat(document.getElementById('monthly-qty').value)||1;
+    document.querySelectorAll('#labor-tbody input').forEach(function(i){
+      laborCosts[i.dataset.id] = parseFloat(i.value)||0;
+    });
+    calc();
+    alert(currentLang==='en' ? '✓ Cost settings applied.' : '✓ 원가 설정이 적용되었습니다.');
+  });
+
+  document.getElementById('apb').addEventListener('click', function(){
+    document.querySelectorAll('#stb input').forEach(function(i){
+      var k=i.dataset.k, f=i.dataset.f;
+      if(f==='lb') M[k].lb=i.value;
+      else { var v=parseFloat(i.value); if(!isNaN(v)&&v>=0) M[k][f]=v; }
+    });
+    recalcUP(); calc();
+    alert(currentLang==='en' ? '✓ Material prices applied.' : '✓ 자재 단가가 적용되었습니다.');
+  });
+
+  document.getElementById('rsb').addEventListener('click', function(){
+    M = cloneDeep(MATERIALS); recalcUP(); renderMat(); calc();
+  });
+
+  // ── 초기화 ────────────────────────────────────────────────
+  document.getElementById('il').value = CS.defaultLossRate;
+  renderOrders(); renderMat(); renderLabor(); calc();
+
+})();
+</script>
+</body>
+</html>
