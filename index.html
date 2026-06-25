@@ -120,6 +120,11 @@ code{font-size:11px;background:var(--bg3);padding:1px 5px;border-radius:3px;}
 .en{display:none;}
 body.en .ko{display:none;}
 body.en .en{display:inline;}
+body.en div.en{display:block;}
+body.en p.en{display:block;}
+body.en th.en{display:table-cell;}
+body.en td.en{display:table-cell;}
+body.en span.en{display:inline;}
 
 @media(max-width:600px){
   .body{padding:12px 10px 50px;}
@@ -399,8 +404,16 @@ var lang = 'ko';
 document.querySelectorAll('.lang-btn').forEach(function(b){
   b.addEventListener('click', function(){
     lang = b.dataset.lang;
-    document.body.className = lang === 'en' ? 'en' : '';
-    document.querySelectorAll('.lang-btn').forEach(function(x){ x.classList.toggle('active', x.dataset.lang === lang); });
+    if(lang === 'en'){
+      document.body.classList.add('en');
+    } else {
+      document.body.classList.remove('en');
+    }
+    document.querySelectorAll('.lang-btn').forEach(function(x){
+      x.classList.toggle('active', x.dataset.lang === lang);
+    });
+    // stat cards 재렌더링 (언어에 따라 동적 텍스트 변경)
+    calc();
   });
 });
 
