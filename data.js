@@ -1,10 +1,9 @@
-
 // ============================================================
 //  SDC 원가·구매 계산기 — 데이터 파일
 //  이 파일만 수정하면 모든 계산에 자동 반영됩니다.
 //  마지막 업데이트: 2026-06 (Slides 1-10 반영)
 // ============================================================
- 
+
 // ── 1. 자재 마스터 ────────────────────────────────────────────
 //   lb     : 구매단위 설명
 //   qty    : 구매 1단위당 기본단위 수량
@@ -24,7 +23,7 @@ const MATERIALS = {
   "Zipper":          { lb: "roll (200m)",           qty: 200,   price: 200000,  unit: "m",   fabric: false },
   "Zipper slider":   { lb: "pack (400pcs)",         qty: 400,   price: 60000,   unit: "ea",  fabric: false },
 };
- 
+
 // ── 2. 제품 레시피 ────────────────────────────────────────────
 //   labor : 개당 인건비 (UGX) — HMP Labor Cost 시트 기준
 //   m     : { 자재명: 개당 소요량(기본단위) }
@@ -49,11 +48,11 @@ const MATERIALS = {
 //  Slide 15 : Square Pouch
 //  Slide 16 : Wrist Pouch
 //  Slides 25-26: Jerrycan Bag
- 
+
 const PRODUCTS = [
- 
+
   // ── 기존 제품 (Slides 15-16, 11-14, 25-26) ────────────────
- 
+
   {
     id: "wp", name: "Wrist Pouch", labor: 2000,
     slide: 16,
@@ -99,9 +98,9 @@ const PRODUCTS = [
       "Zipper": 0.4572, "Zipper slider": 1
     }
   },
- 
+
   // ── 슬라이드 2-10 신규 추가 ────────────────────────────────
- 
+
   {
     id: "sbv3", name: "Shoppers Bag v3", labor: 3500,
     slide: 2,
@@ -187,9 +186,9 @@ const PRODUCTS = [
     notes: "Sofa material excluded - no cost data.",
     m: { "Kitenge": 0.2050, "Zipper": 0.43, "Zipper slider": 2 }
   },
- 
+
 ];
- 
+
 // ── 3. 기본 원가 설정 ─────────────────────────────────────────
 const DEFAULT_COST_SETTINGS = {
   subPct:          10,      // 부재료비 (자재비 대비 %) — 실, 본드 등 소모품
